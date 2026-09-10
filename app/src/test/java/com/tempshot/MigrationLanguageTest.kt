@@ -35,6 +35,13 @@ class MigrationLanguageTest {
   assertEquals("en",reloaded.language);assertEquals(original,reloaded.device)
  }
  @Test fun defaultIsChineseAndEmpty(){assertEquals("zh",AppState().language);assertTrue(AppState().device.photos.isEmpty())}
+ @Test fun noticePreferencePersistsAndLegacyStateDefaultsToShown(){
+  val context=ApplicationProvider.getApplicationContext<Context>();val prefs=context.getSharedPreferences("tempshot-v1",Context.MODE_PRIVATE)
+  prefs.edit().clear().commit();AlbumStore(context).update{AppState(showNoticeOnLaunch=false)}
+  assertFalse(AlbumStore(context).state.value.showNoticeOnLaunch)
+  val legacy=JSONObject(prefs.getString("state",null)!!).apply{remove("showNoticeOnLaunch")};prefs.edit().putString("state",legacy.toString()).commit()
+  assertTrue(AlbumStore(context).state.value.showNoticeOnLaunch)
+ }
  @Test fun legacyLibraryDefaultsToManualCleanup(){
   val context=ApplicationProvider.getApplicationContext<Context>();val prefs=context.getSharedPreferences("tempshot-v1",Context.MODE_PRIVATE)
   prefs.edit().clear().commit();AlbumStore(context).update{AppState(device=sampleLibrary())}

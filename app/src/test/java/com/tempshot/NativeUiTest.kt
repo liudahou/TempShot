@@ -21,7 +21,9 @@ class NativeUiTest {
  @Before fun launch(){
   store=AlbumStore.get(ApplicationProvider.getApplicationContext())
   store.update {AppState(device=sampleLibrary())}
-  compose.setContent {TempShotApp(store,0,false,{},{},{},{},{photos,restore->store.library {l->l.copy(photos=l.photos.map {p->if(photos.any{it.id==p.id}) if(restore) Rules.keep(p,true) else p.copy(state=PhotoState.TRASH) else p})}},{})}
+  compose.setContent {TempShotApp(store,0,false,{},{},{},{},{photos,restore->store.library {l->l.copy(photos=l.photos.map {p->if(photos.any{it.id==p.id}) if(restore) Rules.keep(p,true) else p.copy(state=PhotoState.TRASH) else p})}},{},{})}
+  compose.onNodeWithText("我同意").assertIsDisplayed()
+  compose.onNodeWithText("我同意").performClick()
  }
  private fun shot(name:String){
   compose.waitForIdle()
@@ -69,6 +71,9 @@ class NativeUiTest {
   compose.onNodeWithText("选择使用方式").assertDoesNotExist()
   compose.onNodeWithText("language").performClick()
   compose.onNodeWithText("English").performClick()
+  compose.onNodeWithText("I agree").assertIsDisplayed()
+  compose.onNodeWithText("I agree").performClick()
+  compose.onNodeWithText("Notice").assertIsDisplayed()
   compose.onNodeWithText("A little less to keep.").assertIsDisplayed()
   Assert.assertEquals("en",AlbumStore(ApplicationProvider.getApplicationContext()).state.value.language)
   shot("home-en")
@@ -84,8 +89,24 @@ class NativeUiTest {
   compose.onNodeWithText("Close").performClick()
   compose.onNodeWithText("language").performClick()
   compose.onNodeWithText("中文").performClick()
+  compose.onNodeWithText("我同意").assertIsDisplayed()
+  compose.onNodeWithText("我同意").performClick()
   compose.onNodeWithText("此刻需要的，暂时留在这里。").assertIsDisplayed()
   Assert.assertEquals("zh",store.state.value.language)
+ }
+ @Test fun importantNoticeButtonReopensNotice(){
+  compose.onNodeWithText("重要提示").performClick()
+  compose.onNodeWithText("拒绝使用 APP").assertIsDisplayed()
+  compose.onNodeWithText("为保证应用正常运行，请在系统最近任务中锁定本APP，并允许其在后台运行。系统省电限制、强行停止或设备厂商的清理机制仍可能导致处理延迟。").assertIsDisplayed()
+ }
+ @Test fun dontShowAgainPersistsButLanguageSwitchStillShowsNotice(){
+  compose.onNodeWithText("重要提示").performClick()
+  compose.onNodeWithText("不再提示").performClick()
+  compose.onNodeWithText("我同意").performClick()
+  Assert.assertFalse(store.state.value.showNoticeOnLaunch)
+  compose.onNodeWithText("language").performClick()
+  compose.onNodeWithText("English").performClick()
+  compose.onNodeWithText("I agree").assertIsDisplayed()
  }
  @Test fun newInstallHasOnlyEmptyDeviceLibrary(){
   compose.runOnIdle{store.update{AppState()}}

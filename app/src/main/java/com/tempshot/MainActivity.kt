@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 class MainActivity:ComponentActivity() {
  private lateinit var store:AlbumStore
  private val permissionRevision=mutableIntStateOf(0)
+ private val noticeRevision=mutableIntStateOf(0)
  private val busy=androidx.compose.runtime.mutableStateOf(false)
  private var pendingIds=emptyList<String>()
  private var restoring=false
@@ -49,14 +50,15 @@ class MainActivity:ComponentActivity() {
   super.onCreate(savedInstanceState);enableEdgeToEdge();store=AlbumStore.get(this)
   pendingIds=savedInstanceState?.getStringArrayList("pending")?.toList()?:emptyList()
   restoring=savedInstanceState?.getBoolean("restoring")?:false
-  setContent { TempShotApp(store,permissionRevision.intValue,busy.value,::refresh,::requestPhotos,::requestManager,::requestNotification,::operate,::message,intent.getBooleanExtra("show_due",false)) }
+  setContent { TempShotApp(store,permissionRevision.intValue,busy.value,::refresh,::requestPhotos,::requestManager,::requestNotification,::operate,::message,::declineUse,intent.getBooleanExtra("show_due",false),noticeRevision.intValue) }
   DeviceMedia.schedule(this)
  }
- override fun onStart(){super.onStart();if(DeviceMedia.fullAccess(this)){contentResolver.registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,true,observer);observerRegistered=true}}
+ override fun onStart(){super.onStart();noticeRevision.intValue++;if(DeviceMedia.fullAccess(this)){contentResolver.registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,true,observer);observerRegistered=true}}
  override fun onStop(){if(observerRegistered){contentResolver.unregisterContentObserver(observer);observerRegistered=false};refreshJob?.cancel();super.onStop()}
  override fun onResume(){super.onResume();permissionRevision.intValue++;if(::store.isInitialized) refresh()}
  override fun onSaveInstanceState(outState:Bundle){outState.putStringArrayList("pending",ArrayList(pendingIds));outState.putBoolean("restoring",restoring);super.onSaveInstanceState(outState)}
  private fun message(text:String){Toast.makeText(this,Words.translate(text,store.state.value.language),Toast.LENGTH_SHORT).show()}
+ private fun declineUse(){finishAndRemoveTask()}
  private fun refresh(){if(!::store.isInitialized || busy.value)return;busy.value=true;lifecycleScope.launch {try{withContext(Dispatchers.IO){DeviceMedia.scan(this@MainActivity)}}finally{busy.value=false;permissionRevision.intValue++}}}
  private fun requestPhotos(){
   val p=if(Build.VERSION.SDK_INT>=34) arrayOf(Manifest.permission.READ_MEDIA_IMAGES,Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
@@ -86,4 +88,3 @@ class MainActivity:ComponentActivity() {
   }
  }
 }
-

@@ -16,6 +16,11 @@ val LocalLanguage=staticCompositionLocalOf { "zh" }
 object Words {
  private val english=mapOf(
   "一刻相册" to "TempShot", "一刻相册 Logo" to "TempShot logo",
+  "重要提示" to "Important notice", "我同意" to "I agree", "拒绝使用 APP" to "Decline and exit", "不再提示" to "Don't show again",
+  "本APP不会请求网络访问权限。获得授权的照片仅在本机安全读取、分类和处理。" to "This app does not request network access. Authorized photos are read, classified, and processed securely on this device only.",
+  "本APP会根据你设置的规则尝试处理到期图片并移入系统回收站。请在操作前仔细确认设置；因误操作、错误配置、系统或设备差异等造成的任何损失，由用户自行承担。" to "This app uses your rules to process expired photos and move them to the system trash. Review your settings carefully before taking action. You accept responsibility for any loss caused by mistakes, incorrect settings, or system and device differences.",
+  "为保证应用正常运行，请在系统最近任务中锁定本APP，并允许其在后台运行。系统省电限制、强行停止或设备厂商的清理机制仍可能导致处理延迟。" to "To help the app work normally, lock it in the system's recent apps screen and allow background activity. Battery restrictions, force stop, or device-maker cleanup mechanisms may still delay processing.",
+  "如有任何问题或意见，欢迎联系作者liudahou666@gmail.com😊" to "If you have any questions or feedback, feel free to contact the author at liudahou666@gmail.com 😊",
   "管理" to "Manage", "临时相册" to "Temporary album",
   "照片访问已授权" to "Full photo access granted", "仅部分照片已授权" to "Selected photos only", "照片访问未授权" to "Photo access not granted",
   "免确认清理：已授权 · 后台到期提醒" to "Media access granted · Expiry reminders",

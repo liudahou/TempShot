@@ -14,7 +14,7 @@ data class Photo(val id: String, val title: String, val source: Source, val adde
 data class Rule(val enabled: Boolean = false, val since: Long = 0)
 data class Library(val duration: Int = 24, val rules: List<Rule> = List(3) { Rule() }, val photos: List<Photo> = emptyList(),
  val seen: Map<String, Boolean> = emptyMap(), val initialized: Boolean = false, val lastScan: Long = 0, val error: String = "", val cleanupMode: CleanupMode = CleanupMode.MANUAL)
-data class AppState(val language: String = "zh", val device: Library = Library()) { val library: Library get() = device }
+data class AppState(val language: String = "zh", val device: Library = Library(), val showNoticeOnLaunch: Boolean = true) { val library: Library get() = device }
 object Rules {
  fun due(l: Library, now: Long) = l.photos.filter { it.state == PhotoState.TEMPORARY && it.expires <= now }
  fun keep(p: Photo, restored: Boolean = false) = p.copy(state=PhotoState.KEPT,restored=p.restored||restored)
@@ -45,7 +45,7 @@ fun expirySummary(photos:List<Photo>,now:Long):String {
  val expired=photos.count {it.expires<=now}
  if(expired>0) return "$expired 张图片已到期"
  val next=photos.minOf {it.expires}
- return "最早 ${timeUntil(next,now)} 后到期"
+ return "最早 ${timeUntil(next,now)}后到期"
 }
 fun remaining(p: Photo, now: Long): String {
  if(p.state==PhotoState.KEPT) return if(p.restored) "已恢复并保留" else "已保留 · 不会自动清理"

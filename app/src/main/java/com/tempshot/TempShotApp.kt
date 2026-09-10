@@ -38,13 +38,15 @@ private val Hairline=Color(0xFFEAECF3)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun TempShotApp(store:AlbumStore,permissionRevision:Int,busy:Boolean,onRefresh:()->Unit,
- onRead:()->Unit,onManage:()->Unit,onNotify:()->Unit,onTrash:(List<Photo>,Boolean)->Unit,onMessage:(String)->Unit,showDue:Boolean=false) {
+ onRead:()->Unit,onManage:()->Unit,onNotify:()->Unit,onTrash:(List<Photo>,Boolean)->Unit,onMessage:(String)->Unit,
+ onDeclineUse:()->Unit,showDue:Boolean=false,noticeRevision:Int=0) {
  val state by store.state.collectAsState()
  val l=state.library
  val tr:(String)->String={Words.translate(it,state.language)}
  var page by rememberSaveable { mutableIntStateOf(if(showDue)1 else 0) }
  var filter by rememberSaveable { mutableStateOf(if(showDue)"soon" else "temporary") }
- var sheet by rememberSaveable { mutableStateOf("") }
+ var sheet by rememberSaveable { mutableStateOf(if(state.showNoticeOnLaunch) "notice" else "") }
+ var suppressNotice by rememberSaveable { mutableStateOf(!state.showNoticeOnLaunch) }
  var selected by rememberSaveable { mutableStateOf<String?>(null) }
  var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
  val context=LocalContext.current
@@ -55,13 +57,16 @@ private val Hairline=Color(0xFFEAECF3)
  val temporary=l.photos.filter {it.state==PhotoState.TEMPORARY}
  val selectedPhoto=l.photos.find {it.id==selected}
  fun openGallery(){page=1;filter="temporary"}
+ fun openNotice(){suppressNotice=!state.showNoticeOnLaunch;sheet="notice"}
+ fun changeLanguage(code:String){store.update{it.copy(language=code)};suppressNotice=!state.showNoticeOnLaunch;sheet="notice"}
  fun processDue(){val due=Rules.due(l,now);if(due.isEmpty()){onMessage("暂无到期图片");return}
   if(!read){sheet="permissions";return}
   sheet="due"
  }
  LaunchedEffect(Unit){while(true){now=System.currentTimeMillis();delay(15_000)}}
  LaunchedEffect(Unit){onRefresh()}
- BackHandler(page!=0 || selected!=null || sheet.isNotEmpty()){when{sheet.isNotEmpty()->sheet="";selected!=null->selected=null;else->page=0}}
+ LaunchedEffect(noticeRevision){if(state.showNoticeOnLaunch){suppressNotice=false;sheet="notice"}}
+ BackHandler(page!=0 || selected!=null || sheet.isNotEmpty()){when{sheet=="notice"->Unit;sheet.isNotEmpty()->sheet="";selected!=null->selected=null;else->page=0}}
  CompositionLocalProvider(LocalLanguage provides state.language) {
  MaterialTheme(colorScheme=lightColorScheme(primary=Violet,onPrimary=Color.White,secondary=Violet,background=Paper,surface=Color.White,onSurface=Ink,onBackground=Ink,surfaceVariant=Pale)) {
   Scaffold(containerColor=Paper,topBar={
@@ -69,6 +74,10 @@ private val Hairline=Color(0xFFEAECF3)
     Image(painterResource(R.drawable.brand_logo),tr("一刻相册 Logo"),Modifier.size(43.dp))
     Column(Modifier.padding(start=10.dp)){UiText("一刻相册",fontSize=19.sp,fontWeight=FontWeight.Bold,color=Ink);UiText("TEMPSHOT",fontSize=9.sp,letterSpacing=2.sp,color=Muted)}
     Spacer(Modifier.weight(1f))
+    Surface(onClick={openNotice()},color=Color(0xFF7572EC),shape=RoundedCornerShape(9.dp)){
+     UiText(if(state.language=="en") "Notice" else "重要提示",Modifier.padding(horizontal=11.dp,vertical=8.dp),fontSize=10.sp,color=Color(0xFF000000),fontWeight=FontWeight.SemiBold)
+    }
+    Spacer(Modifier.width(8.dp))
     Surface(onClick={sheet="language"},color=Pale,shape=RoundedCornerShape(9.dp)){
      UiText("language",Modifier.padding(horizontal=11.dp,vertical=8.dp),fontSize=10.sp,color=Muted)
     }
@@ -179,7 +188,24 @@ private val Hairline=Color(0xFFEAECF3)
   }
   if(sheet.isNotEmpty()){
    when(sheet){
-    "language"->AlertDialog(onDismissRequest={sheet=""},title={UiText("language")},text={Column{listOf("zh" to "中文","en" to "English").forEach{(code,label)->Row(Modifier.fillMaxWidth().clickable{store.update{it.copy(language=code)};sheet=""}.padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically){RadioButton(selected=state.language==code,onClick={store.update{it.copy(language=code)};sheet=""});UiText(label,Modifier.padding(start=8.dp))}}}},confirmButton={TextButton(onClick={sheet=""}){UiText("关闭")}})
+    "notice"->AlertDialog(
+     onDismissRequest={},
+     title={UiText("重要提示",fontSize=21.sp,fontWeight=FontWeight.SemiBold)},
+     text={Column(Modifier.heightIn(max=430.dp).verticalScroll(rememberScrollState())){
+      UiText("本APP不会请求网络访问权限。获得授权的照片仅在本机安全读取、分类和处理。",fontSize=12.sp,lineHeight=22.sp)
+      UiText("本APP会根据你设置的规则尝试处理到期图片并移入系统回收站。请在操作前仔细确认设置；因误操作、错误配置、系统或设备差异等造成的任何损失，由用户自行承担。",fontSize=12.sp,lineHeight=20.sp,modifier=Modifier.padding(top=14.dp))
+      UiText("为保证应用正常运行，请在系统最近任务中锁定本APP，并允许其在后台运行。系统省电限制、强行停止或设备厂商的清理机制仍可能导致处理延迟。",fontSize=12.sp,lineHeight=20.sp,modifier=Modifier.padding(top=14.dp))
+      UiText("如有任何问题或意见，欢迎联系作者liudahou666@gmail.com😊",fontSize=12.sp,lineHeight=22.sp,modifier=Modifier.padding(top=14.dp))
+      HorizontalDivider(Modifier.padding(top=16.dp),color=Hairline)
+      Row(Modifier.fillMaxWidth().clickable{suppressNotice=!suppressNotice}.padding(top=8.dp),verticalAlignment=Alignment.CenterVertically){
+       Checkbox(checked=suppressNotice,onCheckedChange={suppressNotice=it})
+       UiText("不再提示",fontSize=12.sp,color=Muted,modifier=Modifier.padding(start=4.dp))
+      }
+     }},
+     confirmButton={TextButton(onClick={store.update{it.copy(showNoticeOnLaunch=!suppressNotice)};sheet=""}){UiText("我同意")}},
+     dismissButton={TextButton(onClick=onDeclineUse){UiText("拒绝使用 APP",color=Color(0xFFB87E68))}}
+    )
+    "language"->AlertDialog(onDismissRequest={sheet=""},title={UiText("language")},text={Column{listOf("zh" to "中文","en" to "English").forEach{(code,label)->Row(Modifier.fillMaxWidth().clickable{changeLanguage(code)}.padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically){RadioButton(selected=state.language==code,onClick={changeLanguage(code)});UiText(label,Modifier.padding(start=8.dp))}}}},confirmButton={TextButton(onClick={sheet=""}){UiText("关闭")}})
     "permissions"->ModalBottomSheet(onDismissRequest={sheet=""},containerColor=Paper){Column(Modifier.padding(horizontal=24.dp).padding(bottom=30.dp).verticalScroll(rememberScrollState())){
      UiText("授权管理",fontSize=21.sp,fontWeight=FontWeight.SemiBold)
      UiText("本 APP 不联网，不会上传照片；图片仅在本机处理和保留，以保护你的隐私。完整访问用于发现新增图片，媒体管理权限用于减少系统确认。",fontSize=12.sp,color=Muted,lineHeight=20.sp,modifier=Modifier.padding(vertical=14.dp))
